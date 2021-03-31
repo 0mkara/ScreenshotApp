@@ -6,10 +6,8 @@
  * @flow strict-local
  */
 
-import React, {useEffect} from 'react';
-import secp256k1 from 'react-native-secp256k1';
 import type {Node} from 'react';
-import BackgroundService from 'react-native-background-actions';
+import React, {useEffect} from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -19,8 +17,9 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
+import BackgroundService from 'react-native-background-actions';
+import secp256k1 from 'react-native-secp256k1';
 import {captureScreen} from 'react-native-view-shot';
-
 import {
   Colors,
   DebugInstructions,
@@ -71,12 +70,33 @@ const veryIntensiveTask = async taskDataArguments => {
       }).then(
         async uri => {
           console.log('Image URI', uri);
-          // const data = '1H1SJuGwoSFTqNI8wvVWEdGRpBvTnzLckoZ1QTF7gI0';
+          const privA = await secp256k1.ext.generateKey();
+          const privB = await secp256k1.ext.generateKey();
+
+          const pubA = await secp256k1.computePubkey(privA, true);
+          const pubB = await secp256k1.computePubkey(privB, true);
+
+          // sign verify
+          const data = '1H1SJuGwoSFTqNI8wvVWEdGRpBvTnzLckoZ1QTF7gI0';
+          const sigA = await secp256k1.sign(data, privA);
+          console.log('verify: ', await secp256k1.verify(data, sigA, pubA));
+
+          // ecdh && aes256
+          const encryped1 = await secp256k1.ext.encryptECDH(privA, pubB, uri);
+          const decryped1 = await secp256k1.ext.decryptECDH(
+            privB,
+            pubA,
+            encryped1,
+          );
+          console.log('Encrypted Image URI ', encryped1);
+          console.log('Decrypted Image URI ', decryped1);
+
+          /* const data = '1H1SJuGwoSFTqNI8wvVWEdGRpBvTnzLckoZ1QTF7gI0';
           const data = await secp256k1.hex_encode(uri);
           const privA = await secp256k1.ext.generateKey();
           const sigA = await secp256k1.sign(data, privA);
           const pubA = await secp256k1.computePubkey(privA, true);
-          console.log('verify: ', await secp256k1.verify(data, sigA, pubA));
+          console.log('verify: ', await secp256k1.verify(data, sigA, pubA)); */
         },
         error => console.error('Oops, snapshot failed', error),
       );
